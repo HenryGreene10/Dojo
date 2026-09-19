@@ -6,6 +6,15 @@ import { DojoMark } from "@/components/dojo-mark";
 import { createClient } from "@/lib/supabase/client";
 import type { HostDashboardDojo } from "@/lib/types";
 
+function errorMessage(err: unknown, fallback: string) {
+  if (err && typeof err === "object" && "message" in err) {
+    const message = (err as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  if (err instanceof Error && err.message) return err.message;
+  return fallback;
+}
+
 export function HostClient({ configured }: { configured: boolean }) {
   const [loading, setLoading] = useState(configured);
   const [message, setMessage] = useState<string | null>(null);
@@ -50,10 +59,7 @@ export function HostClient({ configured }: { configured: boolean }) {
 
         if (active) await loadDashboard();
       } catch (err) {
-        if (active) {
-          const detail = err instanceof Error ? err.message : "Unknown error";
-          setError(`Could not start this room on this device. ${detail}`);
-        }
+        if (active) setError(`Could not start this room on this device. ${errorMessage(err, "Unknown error")}`);
       } finally {
         if (active) setLoading(false);
       }
@@ -105,7 +111,8 @@ export function HostClient({ configured }: { configured: boolean }) {
 
       setMessage("Room created.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create the room.");
+      console.error("Room creation failed", err);
+      setError(errorMessage(err, "Could not create the room."));
     } finally {
       setBusy(false);
     }
